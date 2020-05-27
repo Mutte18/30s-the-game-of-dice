@@ -9,4 +9,8 @@ const HowToPlay = () => {
 	)
 };
 
+HowToPlay.navigationOptions = {
+	title: "How to Play"
+};
+
 export default HowToPlay;

@@ -1,10 +1,17 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Button } from 'react-native';
 
-const StartScreen = () => {
+const StartScreen = ({navigation}) => {
 	return (
 		<View>
-			<Text>This is the start screen</Text>
+			<Button
+				title={"Start Game"}
+				onPress={() => navigation.navigate("Game")}>
+			</Button>
+			<Button
+				title={"How To Play"}
+				onPress={() => navigation.navigate("HowToPlay")}>
+			</Button>
 		</View>
 	)
 };
