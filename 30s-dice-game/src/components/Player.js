@@ -16,7 +16,7 @@ const getRandomValue = () => {
 const Player = ({player}) => {
 	return (
 		<View>
-			<Text>Player {player.id}: {player.healthPoints}</Text>
+			<Text>Player {player.id + 1}: {player.healthPoints}</Text>
 		</View>
 	)
 };
