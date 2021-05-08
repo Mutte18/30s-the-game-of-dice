@@ -1,4 +1,4 @@
-import React, {useReducer} from 'react';
+import React, {useReducer, useEffect} from 'react';
 import {Button, FlatList, StyleSheet, TouchableOpacity, View, Text} from 'react-native';
 
 
@@ -53,9 +53,11 @@ const reducer = (state, action) => {
 		case 'inflict_damage':
 			return {...state,
 				players: state.players.map((player) => {
-					return player === action.payload.player ? {
+					return player.id === action.payload.player.id ? {
 						...player,
-						healthPoints: player.healthPoints -= action.payload.damageToInflict
+						healthPoints: player.healthPoints -= action.payload.damageToInflict <= 0
+							? player.healthPoints -= action.payload.damageToInflict : 0,
+						isAlive: player.healthPoints > 0
 					} : player
 				})
 			};
@@ -82,7 +84,6 @@ const reducer = (state, action) => {
 				remainingDice: initializeDice(6),
 				storedDice: [],
 				rollForDamageMode: false,
-				activePlayer: null
 			};
 
 		case 'log_state':
@@ -114,13 +115,14 @@ const inflictSelfDamage = (dispatch, state, diceSumValue, player) => {
 };
 
 const checkIfLastDieRolled = (dispatch, state) => {
-	if ((state.storedDice.filter(die => !die.disabled).length > 0) && (state.storedDice.length >= 5)) {
+	if ((state.storedDice.filter(die => !die.disabled).length > 0) && (state.storedDice.length === 6)) {
+
 		const diceSumValue = sumDiceValues(state);
 		if (diceSumValue < 30) {
 			// inflictSelfDamage(dispatch, state, diceSumValue, getActivePlayer(state));
-			inflictSelfDamage(dispatch, state, diceSumValue, getActivePlayer(state));
+			inflictSelfDamage(dispatch, state, diceSumValue, state.activePlayer);
 			dispatch({type: 'set_turn_over', payload: {
-				activePlayer: getNextPlayer(state),
+				activePlayer: getNextAlivePlayer(state.player, state.activePlayer.id),
 				}})
 		}
 		else if (diceSumValue > 30) {
@@ -150,38 +152,39 @@ const initializePlayers = (playerCount) => {
 	const players = [];
 	for (let i = 0; i < playerCount; i++) {
 		players.push({
-			id: i + 1,
-			healthPoints: 30,
+			id: i,
+			healthPoints: 10 + i,
 			isAlive: true
 		})
 	}
 	return players;
 };
 
-const getNextPlayer = (state) => {
-	const activePlayer = getActivePlayer(state);
-	if (activePlayer === null) {
-		return state.players[0];
+const getNextAlivePlayer = (players, nextIdToCheck) => {
+	const alivePlayer = players.find(player => player.id === nextIdToCheck && player.isAlive);
+	if (alivePlayer) {
+		return alivePlayer;
 	}
-	console.log(activePlayer, "TJOHOHOHOHOHOH");
-	const nextPlayerID = state.players[activePlayer.id+ 1];
-	return state.players[nextPlayerID];
-};
 
-const getActivePlayer = (state) => {
-	return state.activePlayer;
+	let nextPlayerId = players[nextIdToCheck + 1].id;
+	if (nextPlayerId === players.length -1) {
+		nextPlayerId = players[0].id;
+	}
+	return getNextAlivePlayer(players, nextPlayerId);
 };
-
 
 const GameScreen = ({ navigation }) => {
+	const initialPlayers = initializePlayers(3);
 	const [state, dispatch] = useReducer(reducer, {
-		storedDice: [],
+		players: initialPlayers,
 		remainingDice: initializeDice(6),
+		storedDice: [],
 		rollForDamageMode: false,
+		firstRoundOver: false,
 		desiredDieNumber: 0,
-		players: initializePlayers(3),
-		activePlayer: null
+		activePlayer: initialPlayers[0]
 	});
+
 	const { storedDice, remainingDice } = state;
 	const errorMessage = "Save atleast one Die before you can roll again!";
 
@@ -233,14 +236,19 @@ const GameScreen = ({ navigation }) => {
 				}
 				/>
 			</View>
+
 			<Button title={"Log state"} onPress={() => dispatch({ type: 'log_state'})}/>
 			<Spacer />
 			<Button title={"Roll dice"} disabled={!okToReroll(state)} onPress={
 				() => rollDice(dispatch, state)}/>
 			<Spacer />
 
+			<Text>ActivePlayer: {JSON.stringify(state.activePlayer)}</Text>
+
 			<Button title={"Reset"}  onPress={
 				() => resetGame(dispatch, state)}/>
+
+
 
 		</View>
 	)
